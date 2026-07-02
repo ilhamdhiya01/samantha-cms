@@ -89,6 +89,7 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           command_timeout: 10m
+          envs: DATABASE_URL,DIRECT_URL,SUPABASE_URL,SUPABASE_SERVICE_ROLE_KEY,JWT_SECRET
           script: |
             set -e
             cd ~/apps/samantha-cms
@@ -97,12 +98,12 @@ jobs:
             cat > .env << EOF
             NODE_ENV=production
             PORT=4006
-            DATABASE_URL=${{ secrets.DATABASE_URL }}
-            DIRECT_URL=${{ secrets.DIRECT_URL }}
-            SUPABASE_URL=${{ secrets.SUPABASE_URL }}
-            SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            DATABASE_URL=${DATABASE_URL}
+            DIRECT_URL=${DIRECT_URL}
+            SUPABASE_URL=${SUPABASE_URL}
+            SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
             JWT_EXPIRES_IN=7d
+            JWT_SECRET=${JWT_SECRET}
             CORS_ORIGIN=http://43.157.223.21:5176
             EOF
 
