@@ -1,0 +1,229 @@
+// prisma/schema.prisma
+// T-CMS-002: Models for CMS — Post, Section, Category, Tag, Admin + relations.
+
+generator client {
+  provider               = "prisma-client"
+  output                 = "../src/generated/prisma"
+  moduleFormat           = "esm"
+  generatedFileExtension = "ts"
+  importFileExtension    = "js"
+  compilerBuild          = "small"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum PostStatus {
+  draft
+  published
+}
+
+enum SectionType {
+  heading
+  paragraph
+  image
+  image_group
+  quote
+  code
+  divider
+}
+
+enum ProjectStatus {
+  ongoing
+  completed
+  archived
+}
+
+enum MediaType {
+  image
+  document
+  other
+}
+
+model Admin {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  posts        Post[]
+}
+
+model Category {
+  id        Int            @id @default(autoincrement())
+  name      String
+  slug      String         @unique
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  posts     PostCategory[]
+}
+
+model Tag {
+  id        Int       @id @default(autoincrement())
+  name      String
+  slug      String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  posts     PostTag[]
+}
+
+model Post {
+  id          Int            @id @default(autoincrement())
+  title       String
+  slug        String         @unique
+  excerpt     String?
+  thumbnail   String?
+  status      PostStatus     @default(draft)
+  publishedAt DateTime?
+  authorId    Int
+  author      Admin          @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  sections    Section[]
+  categories  PostCategory[]
+  tags        PostTag[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([status, publishedAt])
+  @@index([authorId])
+}
+
+// Sections are ordered manually via `order` field (dnd-kit reorder on frontend).
+model Section {
+  id        Int         @id @default(autoincrement())
+  postId    Int
+  post      Post        @relation(fields: [postId], references: [id], onDelete: Cascade)
+  type      SectionType
+  order     Int
+  // Payload differs per type:
+  text      String? // heading, paragraph, quote, code
+  url       String? // image
+  caption   String? // image
+  level     Int? // heading 1..6
+  language  String? // code block
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@index([postId, order])
+}
+
+model PostCategory {
+  postId     Int
+  categoryId Int
+  post       Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([postId, categoryId])
+  @@index([categoryId])
+}
+
+model PostTag {
+  postId Int
+  tagId  Int
+  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag    Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+  @@index([tagId])
+}
+
+model Project {
+  id          Int              @id @default(autoincrement())
+  title       String
+  slug        String           @unique
+  description String
+  imageUrl    String?
+  techStack   String[]
+  liveUrl     String?
+  repoUrl     String?
+  status      ProjectStatus    @default(ongoing)
+  startedAt   DateTime?
+  endedAt     DateTime?
+  sections    ProjectSection[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model ProjectSection {
+  id        Int         @id @default(autoincrement())
+  projectId Int
+  project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  type      SectionType
+  order     Int
+  text      String?
+  url       String?
+  caption   String?
+  images    Json?
+  children  Json?
+  level     Int?
+  language  String?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@index([projectId, order])
+}
+
+model Experience {
+  id          Int       @id @default(autoincrement())
+  company     String
+  role        String
+  description String
+  startDate   DateTime
+  endDate     DateTime?
+  location    String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model ChatSession {
+  id            String        @id @default(uuid())
+  ipHash        String? // hash dari IP, bukan IP asli
+  userAgentHash String? // hash userAgent
+  fingerprint   String? // device fingerprint dari client
+  firstSeenAt   DateTime      @default(now())
+  lastSeenAt    DateTime      @updatedAt
+  expiresAt     DateTime
+  messages      ChatMessage[]
+  metadata      Json? // { country, city, referrer, etc }
+}
+
+model ChatMessage {
+  id        String   @id @default(uuid())
+  sessionId String
+  role      String // "user" | "assistant" | "system"
+  content   String
+  createdAt DateTime @default(now())
+
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+}
+
+model ChatbotKnowledge {
+  id        Int      @id @default(autoincrement())
+  question  String
+  answer    String
+  keywords  String[]
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([enabled])
+}
+
+model Media {
+  id         Int       @id @default(autoincrement())
+  bucket     String // 'blog' | 'projects' | 'misc'
+  path       String // path within bucket
+  url        String
+  filename   String
+  mimeType   String
+  size       Int
+  mediaType  MediaType
+  uploadedBy Int?
+  createdAt  DateTime  @default(now())
+
+  @@unique([bucket, path])
+  @@index([bucket])
+}

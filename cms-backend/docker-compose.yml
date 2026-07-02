@@ -1,0 +1,16 @@
+services:
+  cms-backend-api:
+    build: .
+    image: samantha/cms-backend:latest
+    container_name: cms-backend-api
+    restart: unless-stopped
+    ports:
+      - "4006:4006"
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:4006/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
