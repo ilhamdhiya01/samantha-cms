@@ -94,7 +94,7 @@ jobs:
             cd ~/apps/samantha-cms
 
             echo "=== Write .env ==="
-            cat > .env << 'EOF'
+            cat > .env << EOF
             NODE_ENV=production
             PORT=4006
             DATABASE_URL=${{ secrets.DATABASE_URL }}
