@@ -21,6 +21,8 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          platforms: linux/amd64,linux/arm64
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -54,6 +56,7 @@ jobs:
         with:
           context: ./cms-frontend
           push: true
+          platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta_fe.outputs.tags }}
           labels: ${{ steps.meta_fe.outputs.labels }}
           cache-from: type=gha,scope=frontend
@@ -64,6 +67,7 @@ jobs:
         with:
           context: ./cms-backend
           push: true
+          platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta_be.outputs.tags }}
           labels: ${{ steps.meta_be.outputs.labels }}
           cache-from: type=gha,scope=backend
@@ -84,16 +88,11 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           command_timeout: 10m
           script: |
+            set -e
             cd ~/apps/samantha-cms
-            export REGISTRY_USER="${{ secrets.GHCR_USER }}"
-            export REGISTRY_TOKEN="${{ secrets.GHCR_PAT }}"
-            chmod +x ./login-ghcr.sh
-            REGISTRY_USER="$REGISTRY_USER" REGISTRY_TOKEN="$REGISTRY_TOKEN" ./login-ghcr.sh ghcr.io || REGISTRY_USER="$REGISTRY_USER" REGISTRY_TOKEN="$REGISTRY_TOKEN" ./login-ghcr.sh ghcr.io
+            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin
             echo "=== Pull images ==="
-            docker pull ghcr.io/ilhamdhiya01/samantha-cms-frontend:latest
-            docker pull ghcr.io/ilhamdhiya01/samantha-cms-backend:latest
-            echo "=== Stop old ==="
-            docker compose -f docker-compose.yml down || true
+            docker compose -f docker-compose.yml pull
             echo "=== Recreate ==="
             docker compose -f docker-compose.yml up -d
             echo "=== Prune old images ==="
