@@ -93,6 +93,8 @@ jobs:
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin
             echo "=== Pull images ==="
             docker compose -f docker-compose.yml pull
+            echo "=== Stop old ==="
+            docker compose -f docker-compose.yml down || true
             echo "=== Recreate ==="
             docker compose -f docker-compose.yml up -d
             echo "=== Prune old images ==="
