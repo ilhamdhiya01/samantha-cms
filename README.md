@@ -29,3 +29,10 @@ docker compose -f docker-compose.yml up -d
 - Host: `43.157.223.21`
 - Frontend: http://43.157.223.21:5176
 - Backend: http://43.157.223.21:4006
+
+## GitHub Secrets (Settings → Secrets → Actions)
+- `VPS_HOST` = `43.157.223.21`
+- `VPS_USER` = `ubuntu`
+- `VPS_SSH_KEY` = isi `cat ~/.ssh/id_ed25519` (full private key block)
+- `GHCR_USER` = `ilhamdhiya01`
+- `GHCR_PAT` = GitHub PAT classic, scope `read:packages` (https://github.com/settings/tokens/new)

@@ -85,12 +85,13 @@ jobs:
           command_timeout: 10m
           script: |
             cd ~/apps/samantha-cms
-            REGISTRY=ghcr.io/ilhamdhiya01/samantha-cms
-            echo "=== Login GHCR ==="
-            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ secrets.GHCR_USER }} --password-stdin
+            export REGISTRY_USER="${{ secrets.GHCR_USER }}"
+            export REGISTRY_TOKEN="${{ secrets.GHCR_PAT }}"
+            chmod +x ./login-ghcr.sh
+            REGISTRY_USER="$REGISTRY_USER" REGISTRY_TOKEN="$REGISTRY_TOKEN" ./login-ghcr.sh ghcr.io || REGISTRY_USER="$REGISTRY_USER" REGISTRY_TOKEN="$REGISTRY_TOKEN" ./login-ghcr.sh ghcr.io
             echo "=== Pull images ==="
-            docker pull $REGISTRY-frontend:latest
-            docker pull $REGISTRY-backend:latest
+            docker pull ghcr.io/ilhamdhiya01/samantha-cms-frontend:latest
+            docker pull ghcr.io/ilhamdhiya01/samantha-cms-backend:latest
             echo "=== Stop old ==="
             docker compose -f docker-compose.yml down || true
             echo "=== Recreate ==="
