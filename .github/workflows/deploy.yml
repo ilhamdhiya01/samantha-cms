@@ -59,6 +59,8 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta_fe.outputs.tags }}
           labels: ${{ steps.meta_fe.outputs.labels }}
+          build-args: |
+            VITE_API_URL=http://43.157.223.21:4006
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,scope=frontend,mode=max
 
