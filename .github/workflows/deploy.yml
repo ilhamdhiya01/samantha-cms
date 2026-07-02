@@ -96,16 +96,16 @@ jobs:
 
             echo "=== Write .env ==="
             cat > .env << EOF
-            NODE_ENV=production
-            PORT=4006
-            DATABASE_URL=${DATABASE_URL}
-            DIRECT_URL=${DIRECT_URL}
-            SUPABASE_URL=${SUPABASE_URL}
-            SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
-            JWT_EXPIRES_IN=7d
-            JWT_SECRET=${JWT_SECRET}
-            CORS_ORIGIN=http://43.157.223.21:5176
-            EOF
+NODE_ENV=production
+PORT=4006
+DATABASE_URL=${DATABASE_URL}
+DIRECT_URL=${DIRECT_URL}
+SUPABASE_URL=${SUPABASE_URL}
+SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+JWT_EXPIRES_IN=7d
+JWT_SECRET=${JWT_SECRET}
+CORS_ORIGIN=http://43.157.223.21:5176
+EOF
 
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin
             echo "=== Pull images ==="
