@@ -15,7 +15,7 @@ import { MobileNav } from "@/components/layout/MobileNav";
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
-  // { to: "/posts", label: "Posts", icon: FileText },
+  { to: "/posts", label: "Posts", icon: FileText },
   { to: "/projects", label: "Projects", icon: FolderKanban },
   { to: "/experiences", label: "Experiences", icon: Briefcase },
   { to: "/chatbot", label: "Chatbot", icon: Bot },
