@@ -6,55 +6,14 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-fe:
+  deploy:
     runs-on: ubuntu-latest
-    permissions:
+    if: github.ref == 'refs/heads/main'
+        permissions:
       contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-          cache-dependency-path: cms-frontend/package-lock.json
-
-      - name: Build FE
-        working-directory: ./cms-frontend
-        run: |
-          npm ci
-          npm run build
-
-      - name: Upload dist
-        uses: actions/upload-artifact@v4
-        with:
-          name: fe-dist
-          path: cms-frontend/dist/
-          retention-days: 3
-  deploy:
-    needs: build-fe
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    permissions:
-      contents: read
-    steps:
-      - name: Download dist artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: fe-dist
-          path: ./cms-frontend/dist
-
-      - name: Copy FE dist to VPS
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          source: "cms-frontend/dist/"
-          target: "~/samantha-cms/dist/"
-          rm: true
 
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1
@@ -67,7 +26,6 @@ jobs:
             set -e
             REPO_DIR="$HOME/samantha-cms"
 
-            # --- Pull latest code (BE Dockerfile, src, package.json) ---
             cd "$REPO_DIR"
             git pull --ff-only
 
@@ -84,29 +42,31 @@ jobs:
             CORS_ORIGIN=https://${{ secrets.DOMAIN }}
             EOF
 
-            # --- Sanity check: fail fast kalo .env kosong ---
             if grep -q "DATABASE_URL=$" "$REPO_DIR/.env"; then
-              echo "❌ .env punya placeholder kosong. Cek secrets GitHub." >&2
+              echo ":x: .env has empty placeholders. Check GitHub secrets." >&2
               exit 1
-            fi  
-            # --- Drop old FE container (kalau masih ada) ---
+            fi
+
+            # --- Build FE di VPS ---
+            cd "$REPO_DIR/cms-frontend"
+            npm ci
+            npm run build
+
+            # --- Replace dist (flat, no nested) ---
+            cd "$REPO_DIR"
+            rm -rf dist
+            mv cms-frontend/dist dist
+
+            # --- Drop legacy FE container ---
             docker compose stop cms-frontend 2>/dev/null || true
             docker compose rm -f cms-frontend 2>/dev/null || true
 
             # --- Rebuild & restart BE ---
-            cd "$REPO_DIR"
-            docker compose -f docker-compose.yml build cms-backend-api
+            docker compose -f docker-compose.yml build --no-cache cms-backend-api
             docker compose -f docker-compose.yml up -d cms-backend-api
-
-            # --- Replace FE static dist (rsync from artifact, mount via ssh) ---
-            mkdir -p "$REPO_DIR/dist"
-            # artifact ke-scp ke host via ssh-action auto-copy? TIDAK. Kita butuh copy manual:
-            # => Lo bisa pake scp-action, atau tar + decode di sini.
-            # Simpler: kita copy dari working directory workflow (mounted via rsync ke /tmp)
 
             # --- Health check ---
             sleep 5
             docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Image}}"
-            curl -sf http://127.0.0.1:4006/health || (echo "❌ BE health failed" && docker logs --tail 50 cms-backend-api && exit 1)
-
-            echo "✅ Deploy done. Visit https://${{ secrets.DOMAIN }}"
+            curl -sf http://127.0.0.1:4006/health || (echo ":x: BE health failed" && docker logs --tail 50 cms-backend-api && exit 1)
+            echo ":white_check_mark: Deploy done. Visit https://${{ secrets.DOMAIN }}"
