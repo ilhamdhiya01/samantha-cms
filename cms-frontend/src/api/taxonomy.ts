@@ -1,4 +1,4 @@
-import { apiClient, unwrap } from './client';
+import { apiClient, unwrap } from "./client";
 
 export interface Category {
   id: number;
@@ -12,33 +12,39 @@ export interface Tag {
 }
 
 export async function listCategories() {
-  const res = await apiClient.get('/api/categories');
+  const res = await apiClient.get("/categories");
   return unwrap<Category[]>(res.data);
 }
 export async function createCategory(input: { name: string; slug?: string }) {
-  const res = await apiClient.post('/api/categories', input);
+  const res = await apiClient.post("/categories", input);
   return unwrap<Category>(res.data);
 }
-export async function updateCategory(id: number, input: { name?: string; slug?: string }) {
-  const res = await apiClient.put(`/api/categories/${id}`, input);
+export async function updateCategory(
+  id: number,
+  input: { name?: string; slug?: string },
+) {
+  const res = await apiClient.put(`/categories/${id}`, input);
   return unwrap<Category>(res.data);
 }
 export async function deleteCategory(id: number) {
-  await apiClient.delete(`/api/categories/${id}`);
+  await apiClient.delete(`/categories/${id}`);
 }
 
 export async function listTags() {
-  const res = await apiClient.get('/api/tags');
+  const res = await apiClient.get("/tags");
   return unwrap<Tag[]>(res.data);
 }
 export async function createTag(input: { name: string; slug?: string }) {
-  const res = await apiClient.post('/api/tags', input);
+  const res = await apiClient.post("/tags", input);
   return unwrap<Tag>(res.data);
 }
-export async function updateTag(id: number, input: { name?: string; slug?: string }) {
-  const res = await apiClient.put(`/api/tags/${id}`, input);
+export async function updateTag(
+  id: number,
+  input: { name?: string; slug?: string },
+) {
+  const res = await apiClient.put(`/tags/${id}`, input);
   return unwrap<Tag>(res.data);
 }
 export async function deleteTag(id: number) {
-  await apiClient.delete(`/api/tags/${id}`);
+  await apiClient.delete(`/tags/${id}`);
 }

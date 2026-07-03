@@ -57,6 +57,13 @@ jobs:
             rm -rf dist
             mv cms-frontend/dist dist
 
+            # --- Sync Nginx config (managed via repo) ---
+            sudo cp "$REPO_DIR/deploy/nginx/samantha-cms.conf" /etc/nginx/sites-available/samantha-cms
+            sudo ln -sf /etc/nginx/sites-available/samantha-cms /etc/nginx/sites-enabled/samantha-cms
+            sudo rm -f /etc/nginx/sites-enabled/default
+            sudo nginx -t
+            sudo systemctl reload nginx
+
             # --- Drop legacy FE container ---
             docker compose stop cms-frontend 2>/dev/null || true
             docker compose rm -f cms-frontend 2>/dev/null || true
