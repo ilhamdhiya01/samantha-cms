@@ -1,0 +1,119 @@
+name: build-and-deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository_owner }}/samantha-cms
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          platforms: linux/amd64,linux/arm64
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (frontend)
+        id: meta_fe
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-frontend
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix=
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Extract metadata (backend)
+        id: meta_be
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-backend
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix=
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build & push frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./cms-frontend
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta_fe.outputs.tags }}
+          labels: ${{ steps.meta_fe.outputs.labels }}
+          build-args: |
+            VITE_API_URL=${{ secrets.VITE_API_URL }}
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,scope=frontend,mode=max
+
+      - name: Build & push backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./cms-backend
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta_be.outputs.tags }}
+          labels: ${{ steps.meta_be.outputs.labels }}
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,scope=backend,mode=max
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+    steps:
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          command_timeout: 10m
+          script: |
+            set -e
+            cd ~/apps/samantha-cms
+
+            echo "=== Write .env ==="
+            cat > .env <<EOF
+            NODE_ENV=production
+            PORT=4006
+            DATABASE_URL=${{ secrets.DATABASE_URL }}
+            DIRECT_URL=${{ secrets.DIRECT_URL }}
+            SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+            SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+            JWT_EXPIRES_IN=7d
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            CORS_ORIGIN=http://43.157.223.21:5176
+            EOF
+
+            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin
+            echo "=== Pull images ==="
+            docker compose -f docker-compose.yml pull
+            echo "=== Stop old ==="
+            docker compose -f docker-compose.yml down || true
+            echo "=== Recreate ==="
+            docker compose -f docker-compose.yml up -d
+            echo "=== Prune old images ==="
+            docker image prune -f
+            echo "=== Status ==="
+            docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Image}}"

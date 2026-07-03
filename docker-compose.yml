@@ -1,30 +1,17 @@
 services:
-  cms-admin:
-    image: ghcr.io/ilhamdhiya01/samantha-cms-frontend:latest
-    container_name: cms-admin
-    restart: unless-stopped
-    ports:
-      - "5176:80"
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1/"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
-    pull_policy: always
-
   cms-backend-api:
     image: ghcr.io/ilhamdhiya01/samantha-cms-backend:latest
     container_name: cms-backend-api
     restart: unless-stopped
     ports:
-      - "4006:4006"
+      - "127.0.0.1:4000:4000"
     env_file:
       - .env
+    volumes:
+      - ./cms-backend/uploads:/app/uploads
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:4006/health"]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:4000/health"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 20s
-    pull_policy: always
