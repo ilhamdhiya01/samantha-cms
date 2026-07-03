@@ -1,6 +1,9 @@
-import axios, { type AxiosInstance, type InternalAxiosRequestConfig } from 'axios';
+import axios, {
+  type AxiosInstance,
+  type InternalAxiosRequestConfig,
+} from "axios";
 
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4001';
+const API_URL = import.meta.env.VITE_API_URL ?? "/api";
 
 export const apiClient: AxiosInstance = axios.create({
   baseURL: API_URL,
@@ -16,7 +19,7 @@ export function setAuthToken(token: string | null) {
 }
 
 apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  const stored = localStorage.getItem('cms_token');
+  const stored = localStorage.getItem("cms_token");
   if (stored && !config.headers.Authorization) {
     config.headers.Authorization = `Bearer ${stored}`;
   }
@@ -27,13 +30,13 @@ apiClient.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err?.response?.status === 401) {
-      localStorage.removeItem('cms_token');
-      if (location.pathname !== '/login') {
-        location.href = '/login';
+      localStorage.removeItem("cms_token");
+      if (location.pathname !== "/login") {
+        location.href = "/login";
       }
     }
     return Promise.reject(err);
-  }
+  },
 );
 
 // ApiResponse unwrap helpers
