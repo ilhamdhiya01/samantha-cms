@@ -94,17 +94,17 @@ jobs:
             cd ~/apps/samantha-cms
 
             echo "=== Write .env ==="
-            printf '%s\n' \
-              "NODE_ENV=production" \
-              "PORT=4006" \
-              "DATABASE_URL=${{ secrets.DATABASE_URL }}" \
-              "DIRECT_URL=${{ secrets.DIRECT_URL }}" \
-              "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" \
-              "SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
-              "JWT_EXPIRES_IN=7d" \
-              "JWT_SECRET=${{ secrets.JWT_SECRET }}" \
-              "CORS_ORIGIN=http://43.157.223.21:5176" \
-              > .env
+            cat > .env <<EOF
+            NODE_ENV=production
+            PORT=4006
+            DATABASE_URL=${{ secrets.DATABASE_URL }}
+            DIRECT_URL=${{ secrets.DIRECT_URL }}
+            SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+            SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+            JWT_EXPIRES_IN=7d
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            CORS_ORIGIN=http://43.157.223.21:5176
+            EOF
 
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin
             echo "=== Pull images ==="
