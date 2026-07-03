@@ -76,7 +76,7 @@ jobs:
             # --- Write BE .env (from secrets) ---
             cat > "$REPO_DIR/.env" <<EOF
             NODE_ENV=production
-            PORT=4000
+            PORT=4006
             DATABASE_URL=${{ secrets.DATABASE_URL }}
             DIRECT_URL=${{ secrets.DIRECT_URL }}
             SUPABASE_URL=${{ secrets.SUPABASE_URL }}
@@ -109,6 +109,6 @@ jobs:
             # --- Health check ---
             sleep 5
             docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Image}}"
-            curl -sf http://127.0.0.1:4000/health || (echo "❌ BE health failed" && docker logs --tail 50 cms-backend-api && exit 1)
+            curl -sf http://127.0.0.1:4006/health || (echo "❌ BE health failed" && docker logs --tail 50 cms-backend-api && exit 1)
 
             echo "✅ Deploy done. Visit https://${{ secrets.DOMAIN }}"
