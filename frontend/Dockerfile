@@ -9,8 +9,7 @@ RUN --mount=type=cache,target=/root/.npm \
 COPY tsconfig.json tsconfig.app.json tsconfig.node.json vite.config.ts tailwind.config.js postcss.config.js ./
 COPY index.html ./
 COPY src ./src
-COPY .env .env.example* ./
-RUN set -a && . .env && set +a && npx tsc -b && npx vite build
+RUN echo "VITE_API_URL=${VITE_API_URL}" > .env && npx tsc -b && npx vite build
 
 # --- Runtime ---
 FROM nginx:1.27-alpine-slim AS runtime
