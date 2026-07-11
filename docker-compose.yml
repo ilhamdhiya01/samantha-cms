@@ -1,14 +1,34 @@
 services:
-  cms-backend-api:
-    image: ghcr.io/ilhamdhiya01/samantha-cms-backend:latest
-    container_name: cms-backend-api
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: ${VITE_API_URL:-}
+    container_name: samantha-cms-frontend
     restart: unless-stopped
     ports:
-      - "127.0.0.1:4006:4006"
+      - "127.0.0.1:${FE_PORT:-5176}:80"
     env_file:
-      - .env
+      - ./frontend/.env
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  backend:
+    build:
+      context: ./backend
+    container_name: samantha-cms-backend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${BE_PORT:-4006}:4006"
+    env_file:
+      - ./backend/.env
     volumes:
-      - ./cms-backend/uploads:/app/uploads
+      - ./backend/uploads:/app/uploads
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:4006/health"]
       interval: 30s

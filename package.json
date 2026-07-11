@@ -1,0 +1,12 @@
+{
+  "name": "samantha-cms",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "cd frontend && npm run lint && cd ../backend && npm run lint",
+    "tsc": "cd frontend && npm run typecheck && cd ../backend && npm run typecheck"
+  },
+  "devDependencies": {},
+  "dependencies": {}
+}

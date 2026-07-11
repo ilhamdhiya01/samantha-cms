@@ -14,6 +14,10 @@ dist
 # OS
 .DS_Store
 
+# Build artifacts per service
+frontend/dist
+backend/dist
+
 # Prisma dev artifacts
-cms-backend/prisma/migrations/dev.db*
-cms-backend/src/generated/prisma
+backend/prisma/migrations/dev.db*
+backend/src/generated/prisma

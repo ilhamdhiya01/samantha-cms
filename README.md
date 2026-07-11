@@ -1,32 +1,56 @@
 # Samantha CMS Monorepo
 
-Frontend (`cms-frontend/`) + Backend (`cms-backend/`) — single repo, two Docker images.
+Frontend (`frontend/`) + Backend (`backend/`) — single repo, orchestrated by root `docker-compose.yml`.
 
 ## Layout
 
-- `cms-frontend/` — React 18 + Vite 5 + Tailwind 3, served by nginx, port 5176
-- `cms-backend/` — Express + Prisma + JWT, port 4006
+- `frontend/` — React 18 + Vite 5 + Tailwind 3, served by nginx, port `${FE_PORT:-5176}`
+- `backend/` — Express + Prisma + JWT, port `${BE_PORT:-4006}`
 
 ## Local dev
 
 ```bash
 # Frontend
-cd cms-frontend && cp .env.example .env && npm i && npm run dev
+cd frontend && cp .env.example .env && npm i && npm run dev
 
 # Backend
-cd cms-backend && cp .env.example .env && npm i && npm run dev
+cd backend && cp .env.example .env && npm i && npm run dev
 ```
+
+## Environment files
+
+On the VPS, create these three files (all outside git):
+
+- `/.env` — Docker Compose orchestration (non-secret)
+- `/frontend/.env` — frontend build-time variables (Vite embeds these into the static bundle)
+- `/backend/.env` — backend runtime (secrets)
+
+Example root `/.env`:
+
+```bash
+COMPOSE_PROJECT_NAME=samantha-cms
+FE_PORT=5176
+BE_PORT=4006
+```
+
+Example `/frontend/.env`:
+
+```bash
+VITE_API_URL=http://localhost:4006
+```
+
+Important: `VITE_API_URL` must be in `frontend/.env` because the frontend Dockerfile copies it into the build stage. Vite embeds it into the static bundle at **build time**, so it is not read at runtime from `env_file`.
 
 ## Deploy (auto on push to main)
 
-GitHub Actions builds both images → pushes to `ghcr.io/ilhamdhiya01/samantha-cms/{frontend,backend}` → SSH to VPS → pulls & restarts containers.
+GitHub Actions runs lint + typecheck, then SSH to VPS to build and start services via Docker Compose.
 
 Manual deploy on VPS:
 
 ```bash
-cd ~/apps/samantha-cms
-docker compose -f docker-compose.yml pull
-docker compose -f docker-compose.yml up -d
+cd ~/samantha-cms
+docker compose build --no-cache frontend backend
+docker compose up -d
 ```
 
 ## VPS
