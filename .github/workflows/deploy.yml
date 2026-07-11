@@ -35,6 +35,8 @@ jobs:
           npm run typecheck
 
       - name: Lint and Typecheck Backend
+        env:
+          DIRECT_URL: postgresql://user:pass@localhost:5432/db
         run: |
           cd backend
           npm ci
