@@ -7,7 +7,7 @@ services:
     container_name: samantha-cms-frontend
     restart: unless-stopped
     ports:
-      - "127.0.0.1:${FE_PORT:-5176}:80"
+      - "${FE_PORT:-5176}:80"
     env_file:
       - ./frontend/.env
     depends_on:
@@ -24,7 +24,7 @@ services:
     container_name: samantha-cms-backend
     restart: unless-stopped
     ports:
-      - "127.0.0.1:${BE_PORT:-4006}:4006"
+      - "${BE_PORT:-4006}:4006"
     env_file:
       - ./backend/.env
     volumes:
