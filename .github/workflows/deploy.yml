@@ -1,79 +1,65 @@
-name: build-and-deploy
+name: CI/CD
 
 on:
   push:
-    branches: [main]
+    branches: [main, development]
+  pull_request:
+    branches: [main, development]
   workflow_dispatch:
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+permissions:
+  contents: read
 
-      - name: Deploy to VPS
-        uses: appleboy/ssh-action@v1
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-and-typecheck:
+    name: Lint and Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+
+      - name: Lint and Typecheck Frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run lint
+          npm run typecheck
+
+      - name: Lint and Typecheck Backend
+        run: |
+          cd backend
+          npm ci
+          npm run lint
+          npm run typecheck
+
+  deploy:
+    name: Deploy to VPS
+    needs: lint-and-typecheck
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to VPS via SSH
+        uses: appleboy/ssh-action@v1.2.2
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          command_timeout: 15m
           script: |
             set -e
-            REPO_DIR="$HOME/samantha-cms"
+            cd ${{ secrets.VPS_DEPLOY_PATH }}
+            git reset --hard
+            git pull https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git main
 
-            cd "$REPO_DIR"
-            git pull --ff-only
-
-            # --- Write BE .env (from secrets) ---
-            cat > "$REPO_DIR/.env" <<EOF
-            NODE_ENV=production
-            PORT=4006
-            DATABASE_URL=${{ secrets.DATABASE_URL }}
-            DIRECT_URL=${{ secrets.DIRECT_URL }}
-            SUPABASE_URL=${{ secrets.SUPABASE_URL }}
-            SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-            JWT_EXPIRES_IN=7d
-            JWT_SECRET=${{ secrets.JWT_SECRET }}
-            CORS_ORIGIN=https://${{ secrets.DOMAIN }}
-            EOF
-
-            if grep -q "DATABASE_URL=$" "$REPO_DIR/.env"; then
-              echo ":x: .env has empty placeholders. Check GitHub secrets." >&2
-              exit 1
-            fi
-
-            # --- Build FE di VPS ---
-            cd "$REPO_DIR/cms-frontend"
-            npm ci
-            npm run build
-
-            # --- Replace dist (flat, no nested) ---
-            cd "$REPO_DIR"
-            rm -rf dist
-            mv cms-frontend/dist dist
-
-            # --- Sync Nginx config (managed via repo) ---
-            sudo cp "$REPO_DIR/deploy/nginx/samantha-cms.conf" /etc/nginx/sites-available/samantha-cms
-            sudo ln -sf /etc/nginx/sites-available/samantha-cms /etc/nginx/sites-enabled/samantha-cms
-            sudo rm -f /etc/nginx/sites-enabled/default
-            sudo nginx -t
-            sudo systemctl reload nginx
-
-            # --- Drop legacy FE container ---
-            docker compose stop cms-frontend 2>/dev/null || true
-            docker compose rm -f cms-frontend 2>/dev/null || true
-
-            # --- Rebuild & restart BE ---
-            docker compose -f docker-compose.yml build --no-cache cms-backend-api
-            docker compose -f docker-compose.yml up -d cms-backend-api
-
-            # --- Health check ---
-            sleep 5
-            docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Image}}"
-            curl -sf http://127.0.0.1:4006/health || (echo ":x: BE health failed" && docker logs --tail 50 cms-backend-api && exit 1)
-            echo ":white_check_mark: Deploy done. Visit https://${{ secrets.DOMAIN }}"
+            docker compose down
+            docker compose build --no-cache frontend backend
+            docker compose up -d
+            docker compose logs --tail=20 frontend backend
